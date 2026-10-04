@@ -328,10 +328,12 @@ public class SettingsInfoGui {
                     player.sendSystemMessage(RunManager.formatMessage("Available Commands:"));
                     player.sendSystemMessage(Component.literal("/start [seed]")
                             .withStyle(ChatFormatting.GREEN)
-                            .append(Component.literal(" - Start a new run (random or seed)").withStyle(ChatFormatting.GRAY)));
+                            .append(Component.literal(" - Start a new run (random or seed)")
+                                    .withStyle(ChatFormatting.GRAY)));
                     player.sendSystemMessage(Component.literal("/startpool")
                             .withStyle(ChatFormatting.GREEN)
-                            .append(Component.literal(" - Start a run with a seed from the pool").withStyle(ChatFormatting.GRAY)));
+                            .append(Component.literal(" - Start a run with a seed from the pool")
+                                    .withStyle(ChatFormatting.GRAY)));
                     player.sendSystemMessage(Component.literal("/chaos")
                             .withStyle(ChatFormatting.GREEN)
                             .append(Component.literal(" - Open chaos settings").withStyle(ChatFormatting.GRAY)));

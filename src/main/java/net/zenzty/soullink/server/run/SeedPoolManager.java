@@ -52,8 +52,7 @@ public final class SeedPoolManager {
 
         try {
             Files.createDirectories(path.getParent());
-            String defaultContent =
-                    """
+            String defaultContent = """
                 # Soul Link Speedrun - Seed Pool
                 # Add one seed per line. Lines starting with # and blank lines are ignored.
                 # Seeds can be numbers (e.g. -1234567890) or text (e.g. speedrun).

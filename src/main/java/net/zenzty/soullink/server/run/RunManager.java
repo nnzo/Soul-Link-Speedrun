@@ -164,8 +164,8 @@ public class RunManager {
         }
 
         if (explicitSeed != null) {
-            server.getPlayerList().broadcastSystemMessage(
-                    formatMessage("Generating world with seed " + explicitSeed + "..."), true);
+            server.getPlayerList()
+                    .broadcastSystemMessage(formatMessage("Generating world with seed " + explicitSeed + "..."), true);
             gameState = RunState.GENERATING_WORLD;
             poolManager.prepareExplicitSeed(explicitSeed);
         } else {
@@ -272,8 +272,9 @@ public class RunManager {
             applyHeadStartEffects(manhuntManager);
         }
 
-        server.getPlayerList().broadcastSystemMessage(
-                formatMessage("World ready! Seed: " + worldService.getCurrentSeed() + ". Good luck!"), false);
+        server.getPlayerList()
+                .broadcastSystemMessage(
+                        formatMessage("World ready! Seed: " + worldService.getCurrentSeed() + ". Good luck!"), false);
         SoulLink.LOGGER.info("World generation complete, run started with seed {}", worldService.getCurrentSeed());
     }
 
