@@ -35,10 +35,9 @@ public class WorldService {
     }
 
     /**
-     * The background worker calls this to secretly create worlds for the pool.
+     * Builds temporary worlds (overworld, nether, end) with the specified seed.
      */
-    public PooledRun buildBackgroundWorlds() {
-        long backgroundSeed = new Random().nextLong();
+    public PooledRun buildWorlds(long seed) {
         Difficulty serverDifficulty = Settings.getInstance().getDifficulty();
 
         // Overworld
@@ -48,7 +47,7 @@ public class WorldService {
                 .setDifficulty(serverDifficulty)
                 .setMirrorOverworldClocks(true)
                 .setGameRule(GameRules.ADVANCE_TIME, true)
-                .setSeed(backgroundSeed)
+                .setSeed(seed)
                 .setGenerator(vanillaOverworld.getChunkSource().getGenerator());
 
         RuntimeLevelHandle tempOverworld = fantasy.openTemporaryLevel(overworldConfig);
@@ -60,7 +59,7 @@ public class WorldService {
             RuntimeLevelConfig netherConfig = new RuntimeLevelConfig()
                     .setDimensionType(BuiltinDimensionTypes.NETHER)
                     .setDifficulty(serverDifficulty)
-                    .setSeed(backgroundSeed)
+                    .setSeed(seed)
                     .setGenerator(vanillaNether.getChunkSource().getGenerator());
             tempNether = fantasy.openTemporaryLevel(netherConfig);
         }
@@ -72,12 +71,19 @@ public class WorldService {
             RuntimeLevelConfig endConfig = new RuntimeLevelConfig()
                     .setDimensionType(BuiltinDimensionTypes.END)
                     .setDifficulty(serverDifficulty)
-                    .setSeed(backgroundSeed)
+                    .setSeed(seed)
                     .setGenerator(vanillaEnd.getChunkSource().getGenerator());
             tempEnd = fantasy.openTemporaryLevel(endConfig);
         }
 
-        return new PooledRun(tempOverworld, tempNether, tempEnd, backgroundSeed, null);
+        return new PooledRun(tempOverworld, tempNether, tempEnd, seed, null);
+    }
+
+    /**
+     * The background worker calls this to secretly create worlds for the pool with a random seed.
+     */
+    public PooledRun buildBackgroundWorlds() {
+        return buildWorlds(new Random().nextLong());
     }
 
     /**

@@ -167,9 +167,13 @@ public class SettingsInfoGui {
             loreLines.add(Component.literal("Available Commands:")
                     .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.WHITE)));
             loreLines.add(Component.empty());
-            loreLines.add(Component.literal("  /start")
+            loreLines.add(Component.literal("  /start [seed]")
                     .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GREEN))
-                    .append(Component.literal(" - Start a new run")
+                    .append(Component.literal(" - Start run (random or seed)")
+                            .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY))));
+            loreLines.add(Component.literal("  /startpool")
+                    .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GREEN))
+                    .append(Component.literal(" - Start run with pooled seed")
                             .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY))));
             loreLines.add(Component.literal("  /chaos")
                     .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GREEN))
@@ -322,9 +326,12 @@ public class SettingsInfoGui {
                 case COMMANDS_SLOT -> {
                     // Send commands list to chat
                     player.sendSystemMessage(RunManager.formatMessage("Available Commands:"));
-                    player.sendSystemMessage(Component.literal("/start")
+                    player.sendSystemMessage(Component.literal("/start [seed]")
                             .withStyle(ChatFormatting.GREEN)
-                            .append(Component.literal(" - Start a new run").withStyle(ChatFormatting.GRAY)));
+                            .append(Component.literal(" - Start a new run (random or seed)").withStyle(ChatFormatting.GRAY)));
+                    player.sendSystemMessage(Component.literal("/startpool")
+                            .withStyle(ChatFormatting.GREEN)
+                            .append(Component.literal(" - Start a run with a seed from the pool").withStyle(ChatFormatting.GRAY)));
                     player.sendSystemMessage(Component.literal("/chaos")
                             .withStyle(ChatFormatting.GREEN)
                             .append(Component.literal(" - Open chaos settings").withStyle(ChatFormatting.GRAY)));

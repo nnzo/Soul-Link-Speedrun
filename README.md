@@ -94,12 +94,17 @@ The run is only considered a success once the Ender Dragon is defeated.
 
 ### Commands
 
-- `/start` - Begin a new speedrun attempt (generates fresh worlds)
+- `/start [seed]` - Begin a new speedrun attempt (generates fresh worlds; optionally specify a numerical or text seed)
+- `/startpool` - Start a new run using a random seed from the seed pool (`config/soullink_seeds.txt`)
 - `/reset` - Instantly restart the current run (No OP required)
 - `/stoprun` - Admin command to stop current run (requires operator)
-- `/runinfo` - Display current run state, timer, and shared stats
+- `/runinfo` - Display current run state, timer, seed, and shared stats
 - `/settings` - Open the settings menu
 - `/chaos` - Open the game mode selector menu
+
+### Seed Pool
+
+You can configure a list of curated or favorite seeds in `config/soullink_seeds.txt` (created automatically on first launch). Enter one seed per line. Lines starting with `#` and empty lines are ignored. Use `/startpool` to pick a random seed from this list for your run!
 
 <div align="center">
 

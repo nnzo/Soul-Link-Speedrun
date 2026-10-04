@@ -35,6 +35,7 @@ import net.zenzty.soullink.server.manhunt.CompassTrackingHandler;
 import net.zenzty.soullink.server.manhunt.ManhuntManager;
 import net.zenzty.soullink.server.run.RunManager;
 import net.zenzty.soullink.server.run.RunState;
+import net.zenzty.soullink.server.run.SeedPoolManager;
 import net.zenzty.soullink.server.settings.Settings;
 import net.zenzty.soullink.server.settings.SettingsPersistence;
 
@@ -86,6 +87,7 @@ public class EventRegistry {
             SoulLink.LOGGER.info("Server started - initializing RunManager");
             RunManager.init(server);
             SettingsPersistence.load(server);
+            SeedPoolManager.getInstance().ensureFileExists();
             ManhuntManager.getInstance().resetRoles();
             ManhuntManager.getInstance().cleanupTeams(server);
         });

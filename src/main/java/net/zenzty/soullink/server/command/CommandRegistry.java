@@ -1,7 +1,9 @@
 package net.zenzty.soullink.server.command;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import java.util.OptionalLong;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -11,12 +13,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.zenzty.soullink.server.health.SharedStatsHandler;
 import net.zenzty.soullink.server.manhunt.SpeedrunnerSelectorGui;
 import net.zenzty.soullink.server.run.RunManager;
+import net.zenzty.soullink.server.run.RunState;
+import net.zenzty.soullink.server.run.SeedPoolManager;
 import net.zenzty.soullink.server.settings.Settings;
 import net.zenzty.soullink.server.settings.SettingsGui;
 import net.zenzty.soullink.server.settings.SettingsInfoGui;
 
 /**
- * Registers all mod commands: /start, /stoprun, /runinfo, /settings, /chaos, /reset
+ * Registers all mod commands: /start, /startpool, /stoprun, /runinfo, /settings, /chaos, /reset
  */
 public class CommandRegistry {
 
@@ -25,8 +29,14 @@ public class CommandRegistry {
      */
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            // /start - Start a new run
-            dispatcher.register(Commands.literal("start").executes(CommandRegistry::handleStart));
+            // /start - Start a new run (random or explicit seed)
+            dispatcher.register(Commands.literal("start")
+                    .executes(CommandRegistry::handleStart)
+                    .then(Commands.argument("seed", StringArgumentType.greedyString())
+                            .executes(CommandRegistry::handleStartWithSeed)));
+
+            // /startpool - Start a new run with a random seed from config/soullink_seeds.txt
+            dispatcher.register(Commands.literal("startpool").executes(CommandRegistry::handleStartPool));
 
             // /stoprun - Admin command to stop current run (requires
             // gamemaster permission)
@@ -51,33 +61,60 @@ public class CommandRegistry {
     }
 
     private static int handleStart(CommandContext<CommandSourceStack> context) {
+        return startRunWithSeed(context.getSource(), null);
+    }
+
+    private static int handleStartWithSeed(CommandContext<CommandSourceStack> context) {
+        String seedArg = StringArgumentType.getString(context, "seed");
+        long seed = SeedPoolManager.parseSeed(seedArg);
+        return startRunWithSeed(context.getSource(), seed);
+    }
+
+    private static int handleStartPool(CommandContext<CommandSourceStack> context) {
+        OptionalLong randomSeed = SeedPoolManager.getInstance().getRandomSeed();
+        if (randomSeed.isEmpty()) {
+            context.getSource()
+                    .sendFailure(RunManager.formatMessage(
+                            "No seeds found in config/soullink_seeds.txt. Please add seeds first."));
+            return 0;
+        }
+        return startRunWithSeed(context.getSource(), randomSeed.getAsLong());
+    }
+
+    private static int startRunWithSeed(CommandSourceStack source, Long explicitSeed) {
         RunManager runManager;
         try {
             runManager = RunManager.getInstance();
         } catch (IllegalStateException e) {
-            context.getSource().sendFailure(RunManager.formatMessage("Run manager not initialized."));
+            source.sendFailure(RunManager.formatMessage("Run manager not initialized."));
             return 0;
         }
 
         if (runManager == null) {
-            context.getSource().sendFailure(RunManager.formatMessage("Run manager not initialized."));
+            source.sendFailure(RunManager.formatMessage("Run manager not initialized."));
+            return 0;
+        }
+
+        if (runManager.isRunActive() || runManager.getGameState() == RunState.GENERATING_WORLD) {
+            source.sendFailure(RunManager.formatMessage("A run is already in progress. Use /reset to restart."));
             return 0;
         }
 
         // Manhunt disabled (including pending): start immediately without opening the
         // selector
         if (!Settings.getInstance().isManhuntModeForNextRun()) {
-            runManager.startRun();
+            runManager.startRun(explicitSeed);
             return Command.SINGLE_SUCCESS;
         }
 
         // Manhunt enabled: open the Runner/Hunter selector; startRun is called from the GUI
         // on confirm
-        if (context.getSource().getEntity() instanceof ServerPlayer player) {
+        if (source.getEntity() instanceof ServerPlayer player) {
+            runManager.setPendingExplicitSeed(explicitSeed);
             SpeedrunnerSelectorGui.open(player);
             return Command.SINGLE_SUCCESS;
         }
-        context.getSource().sendFailure(RunManager.formatMessage("Only players can start a Manhunt run."));
+        source.sendFailure(RunManager.formatMessage("Only players can start a Manhunt run."));
         return 0;
     }
 
@@ -122,6 +159,8 @@ public class CommandRegistry {
                 .append(Component.literal(runManager.getGameState().name()).withStyle(ChatFormatting.WHITE))
                 .append(Component.literal(" | Time: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(runManager.getFormattedTime()).withStyle(ChatFormatting.WHITE))
+                .append(Component.literal(" | Seed: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(String.valueOf(runManager.getCurrentSeed())).withStyle(ChatFormatting.WHITE))
                 .append(Component.literal(" | Health: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(String.format("%.1f", SharedStatsHandler.getSharedHealth()))
                         .withStyle(ChatFormatting.WHITE))

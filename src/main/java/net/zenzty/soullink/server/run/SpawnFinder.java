@@ -14,25 +14,32 @@ public class SpawnFinder {
     private BlockPos validSpawnPos = null;
     private boolean searchComplete = false;
     private int attempts = 0;
+    private int currentSearchId = 0;
     private final Random random = new Random();
 
     public void reset() {
+        currentSearchId++;
         validSpawnPos = null;
         searchComplete = false;
         attempts = 0;
     }
 
     public void injectSpawnPos(BlockPos pos) {
+        reset();
         this.validSpawnPos = pos;
         this.searchComplete = true;
     }
 
     public void startSearch(ServerLevel world) {
         reset();
-        searchWithVanillaReroll(world, new BlockPos(0, 64, 0));
+        int searchId = currentSearchId;
+        searchWithVanillaReroll(world, new BlockPos(0, 64, 0), searchId);
     }
 
-    private void searchWithVanillaReroll(ServerLevel world, BlockPos suggestion) {
+    private void searchWithVanillaReroll(ServerLevel world, BlockPos suggestion, int searchId) {
+        if (searchId != currentSearchId) {
+            return;
+        }
         attempts++;
         if (attempts > 50) {
             validSpawnPos = new BlockPos(0, 64, 0);
@@ -44,11 +51,14 @@ public class SpawnFinder {
         PlayerSpawnFinder.findSpawn(world, suggestion)
                 .whenCompleteAsync(
                         (vec, throwable) -> {
+                            if (searchId != currentSearchId) {
+                                return;
+                            }
                             if (throwable != null || vec == null) {
                                 SoulLink.LOGGER.warn(
                                         "Vanilla SpawnFinder did not find a location around {}, rerolling...",
                                         suggestion);
-                                reroll(world, suggestion);
+                                reroll(world, suggestion, searchId);
                                 return;
                             }
 
@@ -57,7 +67,7 @@ public class SpawnFinder {
                             if (isOceanBiome(world, foundPos)) {
                                 SoulLink.LOGGER.info(
                                         "Vanilla found water here: {}. Rerolling... (Attempt: {})", foundPos, attempts);
-                                reroll(world, suggestion);
+                                reroll(world, suggestion, searchId);
                             } else {
                                 SoulLink.LOGGER.info(
                                         "Perfect land spawn found: {} (after {} attempts)", foundPos, attempts);
@@ -68,7 +78,10 @@ public class SpawnFinder {
                         world.getServer());
     }
 
-    private void reroll(ServerLevel world, BlockPos oldSuggestion) {
+    private void reroll(ServerLevel world, BlockPos oldSuggestion, int searchId) {
+        if (searchId != currentSearchId) {
+            return;
+        }
         int jumpDistanceX = 500 + random.nextInt(1000);
         int jumpDistanceZ = 500 + random.nextInt(1000);
 
@@ -76,7 +89,7 @@ public class SpawnFinder {
         int newZ = oldSuggestion.getZ() + (random.nextBoolean() ? jumpDistanceZ : -jumpDistanceZ);
 
         BlockPos newSuggestion = new BlockPos(newX, 64, newZ);
-        searchWithVanillaReroll(world, newSuggestion);
+        searchWithVanillaReroll(world, newSuggestion, searchId);
     }
 
     private boolean isOceanBiome(ServerLevel world, BlockPos pos) {

@@ -26,6 +26,7 @@ import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.GameType;
 import net.zenzty.soullink.mixin.ui.ScreenHandlerAccessor;
 import net.zenzty.soullink.server.run.RunManager;
+import net.zenzty.soullink.server.run.RunState;
 
 /**
  * GUI for selecting Runners and Hunters before starting a Manhunt run. Shows player heads that can
@@ -324,7 +325,7 @@ public class SpeedrunnerSelectorGui {
                 player.closeContainer();
                 playConfirmSound();
                 broadcastRoleAssignments(server);
-                runManager.startRun();
+                runManager.startRun(runManager.consumePendingExplicitSeed());
             });
         }
 
@@ -408,6 +409,17 @@ public class SpeedrunnerSelectorGui {
                             SoundSource.MASTER,
                             0.5f,
                             1.0f);
+        }
+
+        @Override
+        public void removed(Player closingPlayer) {
+            super.removed(closingPlayer);
+            RunManager runManager = RunManager.getInstance();
+            if (runManager != null
+                    && !runManager.isRunActive()
+                    && runManager.getGameState() != RunState.GENERATING_WORLD) {
+                runManager.clearPendingExplicitSeed();
+            }
         }
 
         @Override

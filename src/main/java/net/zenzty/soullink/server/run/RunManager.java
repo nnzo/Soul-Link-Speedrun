@@ -53,6 +53,7 @@ public class RunManager {
 
     private volatile RunState gameState = RunState.IDLE;
     private volatile boolean endInitialized = false;
+    private volatile Long pendingExplicitSeed = null;
 
     public static Component getPrefix() {
         return Component.empty()
@@ -128,12 +129,16 @@ public class RunManager {
     // ==================== RUN LIFECYCLE ====================
 
     public void startRun() {
+        startRun(null);
+    }
+
+    public void startRun(Long explicitSeed) {
         if (gameState == RunState.RUNNING || gameState == RunState.GENERATING_WORLD) {
             SoulLink.LOGGER.warn("Attempted to start run while already running or generating!");
             return;
         }
 
-        SoulLink.LOGGER.info("Starting new run...");
+        SoulLink.LOGGER.info("Starting new run... Explicit seed: {}", explicitSeed);
         EventRegistry.clearDelayedTasks();
 
         Settings.getInstance().applyPendingSettings();
@@ -147,9 +152,6 @@ public class RunManager {
         clearRaidBossbars();
         worldService.saveCurrentWorldsAsOld();
 
-        // Get world from storage
-        PooledRun nextRun = poolManager.claimNextRun();
-
         SharedStatsHandler.reset();
         if (Settings.getInstance().isSyncedInventory()) {
             net.zenzty.soullink.server.inventory.SharedInventoryHandler.reset();
@@ -161,18 +163,28 @@ public class RunManager {
             player.setGameMode(GameType.SPECTATOR);
         }
 
-        if (nextRun != null) {
-            // STORAGE FULL -> INSTANT START
-            worldService.adoptPooledRun(nextRun);
-            spawnFinder.injectSpawnPos(nextRun.spawnPos());
-
-            SoulLink.LOGGER.info("Storage full! Start");
-            transitionToRunning();
-        } else {
-            // STORAGE EMPTY -> (WAIT FOR POOL MANAGER)
-            server.getPlayerList().broadcastSystemMessage(formatMessage("Generating world..."), true);
+        if (explicitSeed != null) {
+            server.getPlayerList().broadcastSystemMessage(
+                    formatMessage("Generating world with seed " + explicitSeed + "..."), true);
             gameState = RunState.GENERATING_WORLD;
-            SoulLink.LOGGER.info("Pool empty! Waiting for world generation");
+            poolManager.prepareExplicitSeed(explicitSeed);
+        } else {
+            // Get world from storage
+            PooledRun nextRun = poolManager.claimNextRun();
+
+            if (nextRun != null) {
+                // STORAGE FULL -> INSTANT START
+                worldService.adoptPooledRun(nextRun);
+                spawnFinder.injectSpawnPos(nextRun.spawnPos());
+
+                SoulLink.LOGGER.info("Storage full! Start");
+                transitionToRunning();
+            } else {
+                // STORAGE EMPTY -> (WAIT FOR POOL MANAGER)
+                server.getPlayerList().broadcastSystemMessage(formatMessage("Generating world..."), true);
+                gameState = RunState.GENERATING_WORLD;
+                SoulLink.LOGGER.info("Pool empty! Waiting for world generation");
+            }
         }
     }
 
@@ -260,8 +272,9 @@ public class RunManager {
             applyHeadStartEffects(manhuntManager);
         }
 
-        server.getPlayerList().broadcastSystemMessage(formatMessage("World ready! Good luck!"), false);
-        SoulLink.LOGGER.info("World generation complete, run started");
+        server.getPlayerList().broadcastSystemMessage(
+                formatMessage("World ready! Seed: " + worldService.getCurrentSeed() + ". Good luck!"), false);
+        SoulLink.LOGGER.info("World generation complete, run started with seed {}", worldService.getCurrentSeed());
     }
 
     private static final int HEAD_START_SECONDS = 30;
@@ -598,5 +611,23 @@ public class RunManager {
 
     public void stopTimer() {
         timerService.stop();
+    }
+
+    public long getCurrentSeed() {
+        return worldService.getCurrentSeed();
+    }
+
+    public void setPendingExplicitSeed(Long seed) {
+        this.pendingExplicitSeed = seed;
+    }
+
+    public Long consumePendingExplicitSeed() {
+        Long seed = this.pendingExplicitSeed;
+        this.pendingExplicitSeed = null;
+        return seed;
+    }
+
+    public void clearPendingExplicitSeed() {
+        this.pendingExplicitSeed = null;
     }
 }

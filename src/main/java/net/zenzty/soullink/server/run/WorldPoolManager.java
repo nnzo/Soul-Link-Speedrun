@@ -52,7 +52,20 @@ public class WorldPoolManager {
         return readyRuns.poll();
     }
 
+    /**
+     * Prepares a world with a specific explicit seed. Cleans up any existing pooled world
+     * and starts generation and spawn search for the requested seed.
+     */
+    public void prepareExplicitSeed(long seed) {
+        cleanup();
+        SoulLink.LOGGER.info("WorldPoolManager: Preparing explicit seed {}", seed);
+        isGenerating = true;
+        currentlyBuildingRun = worldService.buildWorlds(seed);
+        backgroundSpawnFinder.startSearch(currentlyBuildingRun.overworld().asLevel());
+    }
+
     public void cleanup() {
+        backgroundSpawnFinder.reset();
         PooledRun run;
         while ((run = readyRuns.poll()) != null) {
             if (run.overworld() != null) run.overworld().delete();
@@ -65,6 +78,8 @@ public class WorldPoolManager {
             if (currentlyBuildingRun.nether() != null)
                 currentlyBuildingRun.nether().delete();
             if (currentlyBuildingRun.end() != null) currentlyBuildingRun.end().delete();
+            currentlyBuildingRun = null;
         }
+        isGenerating = false;
     }
 }
